@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
@@ -175,7 +175,7 @@ function ShopSidebar({
 }
 
 // ── Main Page ─────────────────────────────────────────────
-export default function ShopPage() {
+function ShopContent() {
   const [allProducts, setAllProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(true);
   
@@ -511,5 +511,19 @@ export default function ShopPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function ShopPage() {
+  return (
+    <Suspense 
+      fallback={
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+          <Loader2 size={32} style={{ color: 'var(--color-lumen-gold)', animation: 'spin 1s linear infinite' }} />
+        </div>
+      }
+    >
+      <ShopContent />
+    </Suspense>
   );
 }
