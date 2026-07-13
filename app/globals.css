@@ -1,26 +1,262 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap');
+
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ── Tailwind v4 Theme (CSS-first config) ───────────────── */
+@theme {
+  /* Colors */
+  --color-lumen-bg: #f5f5f3;
+  --color-lumen-white: #ffffff;
+  --color-lumen-black: #1a1a1a;
+  --color-lumen-gold: #c9a96e;
+  --color-lumen-gold-light: #e8d5b0;
+  --color-lumen-muted: #4a4a4a;
+  --color-lumen-border: #e5e5e5;
+  --color-lumen-border-dark: #b5b5b5;
+  --color-lumen-card-bg: #ffffff;
+  --color-lumen-error: #cc0000;
+  --color-lumen-error-light: #fff0f0;
+  --color-lumen-success: #2d7a4f;
+  --color-lumen-success-light: #f0fff4;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Fonts */
+  --font-family-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-family-sans: 'Inter', system-ui, sans-serif;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Keyframes */
+  --animate-fadeIn: fadeIn 0.4s ease-out;
+  --animate-slideIn: slideIn 0.35s ease-out;
+  --animate-shimmer: shimmer 1.5s infinite;
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideIn {
+    from { transform: translateX(100%); }
+    to   { transform: translateX(0); }
+  }
+  @keyframes shimmer {
+    from { background-position: -200% 0; }
+    to   { background-position:  200% 0; }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ── CSS Custom Properties ─────────────────────────────── */
+:root {
+  --nav-height: 64px;
 }
+
+/* ── Base Resets ────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-lumen-bg);
+  color: var(--color-lumen-black);
+  font-family: var(--font-family-sans);
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-family-serif);
+}
+
+img { display: block; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--color-lumen-bg); }
+::-webkit-scrollbar-thumb { background: #c5c5c5; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #a0a0a0; }
+
+/* ── Reusable Component Classes ─────────────────────────── */
+
+/* Buttons */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--color-lumen-black);
+  color: #fff;
+  font-family: var(--font-family-sans);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.875rem 2rem;
+  transition: opacity 0.2s;
+  cursor: pointer;
+  border: none;
+}
+.btn-primary:hover { background-color: var(--color-lumen-gold); opacity: 1; }
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--color-lumen-black);
+  color: var(--color-lumen-black);
+  background: transparent;
+  font-family: var(--font-family-sans);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.875rem 2rem;
+  transition: background-color 0.2s, color 0.2s;
+  cursor: pointer;
+}
+.btn-outline:hover {
+  background-color: var(--color-lumen-gold);
+  border-color: var(--color-lumen-gold);
+  color: #fff;
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-family: var(--font-family-sans);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-lumen-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.btn-ghost:hover { color: var(--color-lumen-gold); }
+
+/* Form input */
+.input-field {
+  width: 100%;
+  border: 1px solid var(--color-lumen-border);
+  background: #fff;
+  padding: 0.75rem 1rem;
+  font-family: var(--font-family-sans);
+  font-size: 0.875rem;
+  color: var(--color-lumen-black);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input-field::placeholder { color: var(--color-lumen-muted); }
+.input-field:focus { border-color: var(--color-lumen-black); }
+
+/* Section container */
+.section-container {
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+@media (min-width: 1024px) {
+  .section-container { padding-left: 2rem; padding-right: 2rem; }
+}
+
+/* Card */
+.card {
+  background-color: #fff;
+  border: 1px solid var(--color-lumen-border);
+}
+
+/* Status Badges */
+.badge-base {
+  font-family: var(--font-family-sans);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.625rem;
+  display: inline-block;
+}
+.badge-pending  { border: 1px solid var(--color-lumen-gold);    color: var(--color-lumen-gold); }
+.badge-shipped  { border: 1px solid var(--color-lumen-black);   color: var(--color-lumen-black); }
+.badge-delivered{ background: var(--color-lumen-black);          color: #fff; }
+.badge-processing{ border: 1px solid var(--color-lumen-muted);  color: var(--color-lumen-muted); }
+.badge-cancelled{ border: 1px solid var(--color-lumen-error);   color: var(--color-lumen-error); }
+.badge-paid     { border: 1px solid var(--color-lumen-success); color: var(--color-lumen-success); }
+
+/* Cart badge */
+.cart-badge {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  background-color: var(--color-lumen-gold);
+  color: #fff;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Price range slider */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 1px;
+  background: var(--color-lumen-border);
+  outline: none;
+  width: 100%;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-lumen-black);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-lumen-black);
+  cursor: pointer;
+  border: none;
+}
+
+/* Skeleton */
+.skeleton {
+  background: linear-gradient(90deg, #e5e5e5 25%, #f0f0f0 50%, #e5e5e5 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Animations */
+.animate-fadeIn { animation: var(--animate-fadeIn); }
+.animate-slideIn { animation: var(--animate-slideIn); }
+
+/* ── Status Badges ────────────────────────────────────────── */
+[class^="badge-"] {
+  display: inline-block;
+  padding: 0.2rem 0.625rem;
+  font-family: var(--font-family-sans);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 2px;
+  border-width: 1px;
+  border-style: solid;
+  white-space: nowrap;
+}
+.badge-pending    { background: rgba(201,169,110,0.12); border-color: rgba(201,169,110,0.35); color: #c9a96e; }
+.badge-paid       { background: rgba(45,122,79,0.12);   border-color: rgba(45,122,79,0.35);   color: #4ade80; }
+.badge-processing { background: rgba(59,130,246,0.1);   border-color: rgba(59,130,246,0.3);   color: #60a5fa; }
+.badge-shipped    { background: rgba(139,92,246,0.1);   border-color: rgba(139,92,246,0.3);   color: #a78bfa; }
+.badge-delivered  { background: rgba(45,122,79,0.15);   border-color: rgba(45,122,79,0.4);    color: #4ade80; }
+.badge-cancelled  { background: rgba(204,68,68,0.1);    border-color: rgba(204,68,68,0.3);    color: #f87171; }
