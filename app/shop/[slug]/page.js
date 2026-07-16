@@ -10,88 +10,6 @@ import { Minus, Plus, ChevronDown, ChevronUp, Truck, ZoomIn, Loader2 } from 'luc
 import { getProductBySlug, getProducts } from '@/lib/firestore';
 import RecentlyViewed, { useTrackRecentlyViewed } from '@/components/RecentlyViewed';
 
-// ── Mock product data ─────────────────────────────────────
-const MOCK_PRODUCTS = {
-  'aurelia-tiered': {
-    id: '1',
-    name: 'The Aurelia Tiered',
-    slug: 'aurelia-tiered',
-    category: 'Chandeliers',
-    breadcrumb: 'CHANDELIERS',
-    price: 14200,
-    discountPrice: 12400,
-    sku: 'ES-AT-01',
-    stockQty: 8,
-    images: ['/product-aurelia.jpg', '/cat-chandeliers.jpg', '/cat-pendants.jpg', '/product-deco.jpg'],
-    description: `A masterpiece of modern illumination. The Aurelia Tiered reimagines classic opulence through a minimalist lens, featuring precision-cut geometric crystals suspended in an invisible tension frame. Designed to anchor expansive architectural spaces with quiet authority.`,
-    specifications: [
-      { label: 'Dimensions', value: '80" W × 60" H' },
-      { label: 'Weight', value: '48 lbs' },
-      { label: 'Material', value: 'K9 Crystal, Aerospace Aluminum' },
-      { label: 'Finish', value: 'Brushed Gold' },
-      { label: 'Number of Lights', value: '48' },
-      { label: 'Bulb Type', value: 'LED (Integrated)' },
-      { label: 'Voltage', value: '110-240V' },
-      { label: 'SKU', value: 'LMN-AT-01' },
-    ],
-    shipping: 'Free insured international shipping on all orders. Estimated delivery 4–8 weeks. Fragile pieces are custom crated by our logistics team.',
-  },
-  'obsidian-linear-array': {
-    id: '2',
-    name: 'Obsidian Linear Array',
-    slug: 'obsidian-linear-array',
-    category: 'Chandeliers',
-    breadcrumb: 'CHANDELIERS',
-    price: 8950,
-    discountPrice: null,
-    sku: 'LMN-OL-02',
-    stockQty: 5,
-    images: ['/product-obsidian.jpg', '/cat-wall-lights.jpg', '/product-aurelia.jpg'],
-    description: `Clean, architectural, and uncompromising. The Obsidian Linear Array suspends precision-milled matte black rods in a geometric composition that commands any space it inhabits.`,
-    specifications: [
-      { label: 'Dimensions', value: '72" W × 8" H' },
-      { label: 'Weight', value: '22 lbs' },
-      { label: 'Material', value: 'Powder-Coated Steel' },
-      { label: 'Finish', value: 'Matte Black' },
-      { label: 'Number of Lights', value: '6' },
-      { label: 'Bulb Type', value: 'E26 (included)' },
-      { label: 'Voltage', value: '110-240V' },
-      { label: 'SKU', value: 'LMN-OL-02' },
-    ],
-    shipping: 'Free insured international shipping on all orders. Estimated delivery 3–6 weeks.',
-  },
-  'deco-cascade': {
-    id: '3',
-    name: 'Deco Cascade',
-    slug: 'deco-cascade',
-    category: 'Chandeliers',
-    breadcrumb: 'CHANDELIERS',
-    price: 15200,
-    discountPrice: null,
-    sku: 'LMN-DC-03',
-    stockQty: 3,
-    images: ['/product-deco.jpg', '/cat-chandeliers.jpg', '/product-aurelia.jpg'],
-    description: `The Deco Cascade is a triumph of Art Deco revival. Concentric rings of hand-cut crystal rods cascade downward in a mesmerising waterfall effect, catching and refracting light in every direction.`,
-    specifications: [
-      { label: 'Dimensions', value: '48" W × 72" H' },
-      { label: 'Weight', value: '85 lbs' },
-      { label: 'Material', value: 'Hand-cut Crystal, Chrome' },
-      { label: 'Finish', value: 'Chrome' },
-      { label: 'Number of Lights', value: '24' },
-      { label: 'Bulb Type', value: 'LED (Integrated)' },
-      { label: 'Voltage', value: '110-240V' },
-      { label: 'SKU', value: 'LMN-DC-03' },
-    ],
-    shipping: 'Free insured international shipping on all orders. Estimated delivery 6–10 weeks. Custom crating included.',
-  },
-};
-
-const RELATED_PRODUCTS = [
-  { id: '4', name: 'Aura Pendant', slug: 'aura-pendant', category: 'Pendants', price: 1450, images: ['/cat-pendants.jpg'], isNew: true },
-  { id: '5', name: 'Linea Sconce', slug: 'linea-sconce', category: 'Wall Lights', price: 850, images: ['/cat-wall-lights.jpg'], isNew: false },
-  { id: '6', name: 'Deco Cascade', slug: 'deco-cascade', category: 'Chandeliers', price: 15200, images: ['/product-deco.jpg'], isNew: false },
-];
-
 function Accordion({ title, children }) {
   const [open, setOpen] = useState(false);
   return (
@@ -213,7 +131,7 @@ export default function ProductDetailPage({ params }) {
           <nav className="flex items-center gap-2 text-[11px] font-sans text-lumen-muted mb-8">
             <Link href="/shop" className="hover:text-lumen-gold transition-colors">SHOP</Link>
             <span>/</span>
-            <Link href="/shop" className="hover:text-lumen-gold transition-colors">{product.breadcrumb}</Link>
+            <Link href={`/shop?category=${encodeURIComponent(product.category)}`} className="hover:text-lumen-gold transition-colors">{(product.category || '').toUpperCase()}</Link>
             <span>/</span>
             <span className="text-lumen-black font-medium">{product.name.toUpperCase()}</span>
           </nav>
@@ -422,13 +340,17 @@ export default function ProductDetailPage({ params }) {
         </div>
 
         {/* ── RELATED PRODUCTS ─────────────────────────── */}
-        <section className="section-container py-20">
-          <h2 className="font-serif text-3xl text-center mb-10">You May Also Like</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-            {RELATED_PRODUCTS.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
+        {relatedProducts.length > 0 && (
+          <section className="section-container py-20">
+            <h2 className="font-serif text-3xl text-center mb-10">You May Also Like</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
+              {relatedProducts.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </section>
+        )}
+        <section className="section-container">
           <RecentlyViewed currentSlug={slug} />
         </section>
       </main>
