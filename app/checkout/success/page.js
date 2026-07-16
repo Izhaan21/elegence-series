@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { CheckCircle, Package, Mail } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
-export default function OrderSuccessPage() {
+function OrderSuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams?.get('session_id');
   const { clearCart } = useCart();
@@ -105,5 +105,13 @@ export default function OrderSuccessPage() {
       </main>
       <Footer />
     </>
+  );
+}
+
+export default function OrderSuccessPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>}>
+      <OrderSuccessContent />
+    </Suspense>
   );
 }
