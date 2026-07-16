@@ -197,6 +197,7 @@ function ShopContent() {
 
   const searchParams = useSearchParams();
   const categoryQuery = searchParams?.get('category');
+  const searchQuery = searchParams?.get('search') || '';
 
   // React to URL category changes
   useEffect(() => {
@@ -206,6 +207,11 @@ function ShopContent() {
       setSelectedCategory('All');
     }
   }, [categoryQuery]);
+
+  // Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   useEffect(() => {
     getProducts({ status: 'active' })
@@ -235,6 +241,14 @@ function ShopContent() {
       if (selectedStyles.length && !selectedStyles.includes(p.style)) return false;
       if (selectedFinishes.length && !selectedFinishes.includes(p.finish)) return false;
       if ((p.discountPrice || p.price) > priceRange) return false;
+
+      // Search filter — match against name and category
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const nameMatch = (p.name || '').toLowerCase().includes(q);
+        const categoryMatch = (p.category || '').toLowerCase().includes(q);
+        if (!nameMatch && !categoryMatch) return false;
+      }
       
       const isSoldOut = Number(p.stock) <= 0;
       if (inStock && outOfStock) {
@@ -262,7 +276,7 @@ function ShopContent() {
         break;
     }
     return products;
-  }, [allProducts, selectedCategory, selectedStyles, selectedFinishes, priceRange, sortBy, inStock, outOfStock]);
+  }, [allProducts, selectedCategory, selectedStyles, selectedFinishes, priceRange, sortBy, inStock, outOfStock, searchQuery]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginatedProducts = filtered.slice(
@@ -293,11 +307,23 @@ function ShopContent() {
           </span>
         </nav>
 
+        {/* Active Search Banner */}
+        {searchQuery && (
+          <div style={{ background: 'var(--color-lumen-white)', border: '1px solid var(--color-lumen-border)', padding: '0.75rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+            <p style={{ fontFamily: 'var(--font-family-sans)', fontSize: '0.875rem', color: 'var(--color-lumen-black)' }}>
+              Showing <strong>{filtered.length}</strong> result{filtered.length !== 1 ? 's' : ''} for <strong>"{searchQuery}"</strong>
+            </p>
+            <Link href="/shop" style={{ fontFamily: 'var(--font-family-sans)', fontSize: '0.875rem', color: 'var(--color-lumen-muted)', textDecoration: 'underline', whiteSpace: 'nowrap' }}>
+              Clear search
+            </Link>
+          </div>
+        )}
+
         {/* Page heading */}
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: '1.5rem', marginBottom: '2.5rem' }}>
           <div>
             <h1 className="font-serif" style={{ fontSize: '3rem', marginBottom: '0.75rem', lineHeight: 1.1 }}>
-              Exquisite {selectedCategory === 'All' ? 'Lighting' : selectedCategory}
+              {searchQuery ? `Results for "${searchQuery}"` : `Exquisite ${selectedCategory === 'All' ? 'Lighting' : selectedCategory}`}
             </h1>
             <p style={{ fontSize: '0.875rem', fontFamily: 'var(--font-family-sans)', color: 'var(--color-lumen-muted)', maxWidth: '28rem', lineHeight: 1.7 }}>
               Discover our curated collection of masterfully crafted pieces. Each fixture is designed

@@ -1,15 +1,36 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { Search, User, ShoppingBag, Menu, X } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Search, ShoppingBag, Menu, X } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import CartDrawer from './CartDrawer';
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const { totalItems } = useCart();
+  const router = useRouter();
+  const searchInputRef = useRef(null);
+
+  // Focus input when search opens
+  useEffect(() => {
+    if (searchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [searchOpen]);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    setSearchOpen(false);
+    setSearchQuery('');
+    router.push(`/shop?search=${encodeURIComponent(q)}`);
+  };
 
   const categoriesRow1 = [
     { label: 'Shop All', href: '/shop' },
@@ -75,18 +96,11 @@ export default function Navbar() {
               <div className="flex items-center gap-6 ml-auto flex-shrink-0">
                 <button
                   aria-label="Search"
-                  className="text-lumen-black hover:text-lumen-gold transition-colors duration-150"
+                  onClick={() => setSearchOpen((prev) => !prev)}
+                  className={`text-lumen-black hover:text-lumen-gold transition-colors duration-150 ${searchOpen ? 'text-lumen-gold' : ''}`}
                 >
-                  <Search size={20} strokeWidth={1.5} />
+                  {searchOpen ? <X size={20} strokeWidth={1.5} /> : <Search size={20} strokeWidth={1.5} />}
                 </button>
-
-                <Link
-                  href="/admin/login"
-                  aria-label="Account"
-                  className="text-lumen-black hover:text-lumen-gold transition-colors duration-150 hidden md:block"
-                >
-                  <User size={20} strokeWidth={1.5} />
-                </Link>
 
                 <button
                   aria-label="Cart"
@@ -146,6 +160,38 @@ export default function Navbar() {
             </div>
           )}
         </div>
+
+        {/* Search Overlay — slides down below navbar */}
+        {searchOpen && (
+          <div className="bg-lumen-white border-t border-lumen-border animate-fadeIn shadow-md">
+            <form onSubmit={handleSearch} className="max-w-7xl mx-auto px-6 lg:px-8 py-4 flex items-center gap-4">
+              <Search size={18} strokeWidth={1.5} className="text-lumen-muted flex-shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search chandeliers, pendants, wall lights…"
+                className="flex-1 bg-transparent text-lumen-black placeholder-lumen-muted font-sans text-sm outline-none"
+                onKeyDown={(e) => e.key === 'Escape' && setSearchOpen(false)}
+              />
+              <button
+                type="submit"
+                className="text-[10px] font-sans tracking-[0.15em] uppercase text-lumen-gold hover:text-lumen-black transition-colors font-medium"
+              >
+                Search
+              </button>
+              <button
+                type="button"
+                onClick={() => setSearchOpen(false)}
+                className="text-lumen-muted hover:text-lumen-black transition-colors"
+                aria-label="Close search"
+              >
+                <X size={16} strokeWidth={1.5} />
+              </button>
+            </form>
+          </div>
+        )}
       </header>
 
       {/* Spacer for fixed header (Navbar height has increased) */}
