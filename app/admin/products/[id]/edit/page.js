@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Loader2, ArrowLeft, Upload, X, Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import { addProduct } from '@/lib/firestore';
+import { getProductById, updateProduct } from '@/lib/firestore';
 
 const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
 const UPLOAD_PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
@@ -158,7 +158,7 @@ function ImageUploader({ images, setImages }) {
                   Cover
                 </span>
               )}
-              <img src={img.url} alt={img.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              <img src={img.url} alt={img.name || img.url} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
               <button
                 type="button"
                 onClick={() => setImages(images.filter((_, j) => j !== i))}
@@ -251,25 +251,25 @@ function VariantBuilder({ variants, setVariants }) {
 
 // ── Tag Input ─────────────────────────────────────────────────
 function TagInput({ tags, setTags }) {
-  const [input2, setInput2] = useState('');
+  const [inputVal, setInputVal] = useState('');
 
   const addTag = (val) => {
     const trimmed = val.trim().replace(/,+$/, '');
     if (trimmed && !tags.includes(trimmed) && tags.length < 13) {
       setTags([...tags, trimmed]);
-      setInput2('');
+      setInputVal('');
     }
   };
 
   const handleKey = (e) => {
-    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(input2); }
-    if (e.key === 'Backspace' && !input2 && tags.length) setTags(tags.slice(0, -1));
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(inputVal); }
+    if (e.key === 'Backspace' && !inputVal && tags.length) setTags(tags.slice(0, -1));
   };
 
   return (
     <div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', padding: '0.5rem', border: '1px solid var(--color-lumen-border)', background: 'var(--color-lumen-bg)', minHeight: '2.75rem', alignItems: 'center', cursor: 'text' }}
-        onClick={() => document.getElementById('tag-input')?.focus()}>
+        onClick={() => document.getElementById('tag-input-edit')?.focus()}>
         {tags.map((t) => (
           <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.2rem 0.5rem', background: 'var(--color-lumen-white)', border: '1px solid var(--color-lumen-border)', fontSize: '0.9375rem', color: 'var(--color-lumen-black)' }}>
             {t}
@@ -279,12 +279,12 @@ function TagInput({ tags, setTags }) {
           </span>
         ))}
         <input
-          id="tag-input"
+          id="tag-input-edit"
           type="text"
-          value={input2}
-          onChange={(e) => setInput2(e.target.value)}
+          value={inputVal}
+          onChange={(e) => setInputVal(e.target.value)}
           onKeyDown={handleKey}
-          onBlur={() => addTag(input2)}
+          onBlur={() => addTag(inputVal)}
           placeholder={tags.length === 0 ? 'Add tags (press Enter or comma)' : ''}
           style={{ flex: 1, minWidth: '8rem', background: 'none', border: 'none', outline: 'none', fontSize: '0.875rem', fontFamily: 'var(--font-family-sans)', color: 'var(--color-lumen-black)' }}
         />
@@ -296,15 +296,19 @@ function TagInput({ tags, setTags }) {
   );
 }
 
-// ── Main Add/Edit Product Page ────────────────────────────────
-export default function AddProductPage() {
+// ── Main Edit Product Page ────────────────────────────────────
+export default function EditProductPage({ params }) {
+  const unwrapped = use(params);
+  const productId = unwrapped?.id;
   const router = useRouter();
 
-  const [images, setImages] = useState([]);
+  const [images, setImages] = useState([]);   // { id, url, name, file? }
   const [tags, setTags] = useState([]);
   const [variants, setVariants] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [loadingProduct, setLoadingProduct] = useState(true);
   const [error, setError] = useState('');
+  const [uploadProgress, setUploadProgress] = useState('');
 
   const [form, setForm] = useState({
     title: '',
@@ -328,19 +332,77 @@ export default function AddProductPage() {
     metaDescription: '',
   });
 
-  const set = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
+  // Load existing product data
+  useEffect(() => {
+    if (!productId) return;
+    async function load() {
+      try {
+        const product = await getProductById(productId);
+        if (!product) {
+          setError('Product not found.');
+          setLoadingProduct(false);
+          return;
+        }
 
+        setForm({
+          title: product.name || product.title || '',
+          description: product.description || '',
+          price: product.price != null ? String(product.price) : '',
+          comparePrice: product.comparePrice != null ? String(product.comparePrice) : '',
+          costPerItem: product.costPerItem != null ? String(product.costPerItem) : '',
+          sku: product.sku || '',
+          stock: product.stock != null ? String(product.stock) : '',
+          trackInventory: product.trackInventory ?? true,
+          continueWhenOutOfStock: product.continueWhenOutOfStock ?? false,
+          category: product.category || 'Chandeliers',
+          style: product.style || 'Modern',
+          finish: product.finish || 'Matte Black',
+          collection: product.collection || '',
+          status: product.status || 'active',
+          weight: product.weight != null ? String(product.weight) : '',
+          dimensions: product.dimensions || '',
+          shipping: product.shipping || '',
+          metaTitle: product.metaTitle || '',
+          metaDescription: product.metaDescription || '',
+        });
+
+        // Convert existing image URLs to the image format the uploader expects
+        if (product.images && product.images.length > 0) {
+          setImages(product.images.map((url, i) => ({
+            id: `existing-${i}`,
+            url,
+            name: `image-${i + 1}`,
+            file: null, // no file = existing URL, will be kept as-is
+          })));
+        }
+
+        setTags(product.tags || []);
+        setVariants(
+          (product.variants || []).map((v, i) => ({
+            ...v,
+            id: v.id || String(Date.now() + i),
+          }))
+        );
+      } catch (err) {
+        console.error('Error loading product:', err);
+        setError('Failed to load product data.');
+      } finally {
+        setLoadingProduct(false);
+      }
+    }
+    load();
+  }, [productId]);
+
+  const set = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
   const focus = (e) => { e.target.style.borderColor = 'var(--color-lumen-gold)'; };
   const blur  = (e) => { e.target.style.borderColor = 'var(--color-lumen-border)'; };
-
-  const [uploadProgress, setUploadProgress] = useState('');
 
   const handleSubmit = async (e, publishStatus) => {
     e.preventDefault();
     setSaving(true);
     setError('');
     try {
-      // 1. Upload images to Cloudinary
+      // 1. Process images: upload new ones, keep existing URLs
       const imageUrls = [];
       for (let i = 0; i < images.length; i++) {
         const img = images[i];
@@ -349,11 +411,11 @@ export default function AddProductPage() {
           const url = await uploadToCloudinary(img.file);
           imageUrls.push(url);
         } else if (img.url) {
-          imageUrls.push(img.url); // already a URL (e.g. from editing)
+          imageUrls.push(img.url); // existing Cloudinary URL — keep as-is
         }
       }
 
-      // 2. Build product object
+      // 2. Build updated product object
       setUploadProgress('Saving to database…');
       const slug = slugify(form.title);
       const product = {
@@ -370,11 +432,11 @@ export default function AddProductPage() {
         stock: Number(form.stock || 0),
       };
 
-      // 3. Save to Firestore
-      await addProduct(product);
+      // 3. Update in Firestore
+      await updateProduct(productId, product);
       router.push('/admin/products');
     } catch (err) {
-      console.error('Error saving product:', err);
+      console.error('Error updating product:', err);
       setError('Failed to save product. Please try again.');
     } finally {
       setSaving(false);
@@ -386,6 +448,25 @@ export default function AddProductPage() {
     ? (((Number(form.price) - Number(form.costPerItem)) / Number(form.price)) * 100).toFixed(1)
     : null;
 
+  if (loadingProduct) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', flexDirection: 'column', gap: '1rem' }}>
+        <Loader2 size={32} style={{ color: 'var(--color-lumen-gold)', animation: 'spin 1s linear infinite' }} />
+        <p style={{ color: 'var(--color-lumen-muted)', fontSize: '0.875rem' }}>Loading product…</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  if (error && !form.title) {
+    return (
+      <div style={{ padding: '3rem', textAlign: 'center' }}>
+        <p style={{ color: 'var(--color-lumen-error)', marginBottom: '1rem' }}>{error}</p>
+        <Link href="/admin/products" className="btn-outline">← Back to Products</Link>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={(e) => handleSubmit(e, null)}>
       {/* ── Top bar ── */}
@@ -396,7 +477,7 @@ export default function AddProductPage() {
           <ArrowLeft size={15} strokeWidth={1.75} /> Products
         </Link>
         <span style={{ color: 'var(--color-lumen-border-dark)' }}>/</span>
-        <h1 style={{ fontFamily: 'var(--font-family-sans)', fontSize: '1.5rem', color: 'var(--color-lumen-black)', fontWeight: 600, marginBottom: '0.5rem' }}>Add Product</h1>
+        <h1 style={{ fontFamily: 'var(--font-family-sans)', fontSize: '1.5rem', color: 'var(--color-lumen-black)', fontWeight: 600, marginBottom: '0.5rem' }}>Edit Product</h1>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '1rem' }}>
           <button type="button" onClick={(e) => handleSubmit(e, 'draft')} disabled={saving}
             className="btn-outline" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
@@ -404,7 +485,7 @@ export default function AddProductPage() {
           </button>
           <button type="submit" disabled={saving || !form.title || !form.price}
             className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', opacity: (!form.title || !form.price) ? 0.5 : 1 }}>
-            {saving ? 'Publishing…' : 'Publish Listing →'}
+            {saving ? (uploadProgress || 'Saving…') : 'Save Changes →'}
           </button>
         </div>
       </div>
@@ -432,7 +513,7 @@ export default function AddProductPage() {
               <input required style={input} value={form.title} placeholder="e.g. The Aurelia Tiered Chandelier"
                 onChange={(e) => set('title', e.target.value)} onFocus={focus} onBlur={blur} />
             </FieldRow>
-            <FieldRow label="Description" hint="Describe your piece — materials, dimensions, mood, and installation notes. Good descriptions improve search visibility.">
+            <FieldRow label="Description" hint="Describe your piece — materials, dimensions, mood, and installation notes.">
               <textarea rows={7} style={{ ...input, resize: 'vertical', lineHeight: 1.7 }}
                 value={form.description} placeholder="A masterpiece of modern illumination…"
                 onChange={(e) => set('description', e.target.value)} onFocus={focus} onBlur={blur} />
@@ -548,7 +629,6 @@ export default function AddProductPage() {
                 value={form.metaDescription} placeholder="A brief description for search engines…"
                 onChange={(e) => set('metaDescription', e.target.value)} onFocus={focus} onBlur={blur} />
             </FieldRow>
-            {/* Google preview */}
             {(form.metaTitle || form.title) && (
               <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--color-lumen-bg)', border: '1px solid var(--color-lumen-border)' }}>
                 <p style={{ fontSize: '0.75rem', letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--color-lumen-muted)', marginBottom: '0.5rem' }}>Search Preview</p>
@@ -634,7 +714,7 @@ export default function AddProductPage() {
                 { label: 'Photos', value: `${images.length} / 10` },
                 { label: 'Tags', value: `${tags.length} / 13` },
                 { label: 'Options', value: variants.length || 'None' },
-                { label: 'Status', value: form.status === 'active' ? 'Will be visible' : 'Saved as draft' },
+                { label: 'Status', value: form.status === 'active' ? 'Visible' : 'Draft' },
               ].map(({ label: lbl, value }) => (
                 <div key={lbl} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                   <span style={{ fontSize: '0.9375rem', color: 'var(--color-lumen-muted)' }}>{lbl}</span>
@@ -644,11 +724,11 @@ export default function AddProductPage() {
             </div>
           </div>
 
-          {/* Publish */}
+          {/* Actions */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <button type="submit" disabled={saving || !form.title || !form.price}
               className="btn-primary" style={{ width: '100%', justifyContent: 'center', opacity: (!form.title || !form.price) ? 0.5 : 1 }}>
-              {saving ? 'Publishing…' : 'Publish Listing →'}
+              {saving ? (uploadProgress || 'Saving…') : 'Save Changes →'}
             </button>
             <button type="button" onClick={(e) => handleSubmit(e, 'draft')} disabled={saving}
               className="btn-outline" style={{ width: '100%', justifyContent: 'center' }}>
@@ -664,6 +744,7 @@ export default function AddProductPage() {
       </div>
 
       <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
         @media (min-width: 1024px) {
           .product-form-grid { grid-template-columns: 1fr 21rem !important; }
         }

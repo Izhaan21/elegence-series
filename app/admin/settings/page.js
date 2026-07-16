@@ -1,23 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Save, Check } from 'lucide-react';
-
-const INITIAL_SETTINGS = {
-  storeName: 'Elegence Series',
-  storeEmail: 'hello@elegenceseries.com',
-  supportPhone: '+1 (800) 555-0190',
-  currency: 'USD',
-  taxRate: '0',
-  shippingNote: 'Free insured international shipping on all orders.',
-  metaTitle: 'Elegence Series — Luxury Chandeliers & Pendants',
-  metaDescription: 'Discover meticulously curated architectural lighting designed to transform spaces into masterpieces of modern elegance.',
-  stripePublishableKey: '',
-  orderPrefix: 'ES',
-  maintenanceMode: false,
-  showSalePrices: true,
-  enableReviews: false,
-};
+import { useState, useEffect } from 'react';
+import { Save, Check, Loader2 } from 'lucide-react';
+import { getSettings, updateSettings } from '@/lib/firestore';
 
 const inputStyle = {
   width: '100%',
@@ -86,9 +71,43 @@ function Toggle({ checked, onChange }) {
 }
 
 export default function AdminSettingsPage() {
-  const [settings, setSettings] = useState(INITIAL_SETTINGS);
+  const [settings, setSettings] = useState({
+    storeName: 'Elegence Series',
+    storeEmail: 'hello@elegenceseries.com',
+    supportPhone: '',
+    currency: 'USD',
+    taxRate: '0',
+    shippingNote: 'Free insured international shipping on all orders.',
+    metaTitle: 'Elegence Series — Luxury Chandeliers & Pendants',
+    metaDescription: 'Discover meticulously curated architectural lighting designed to transform spaces into masterpieces of modern elegance.',
+    stripePublishableKey: '',
+    orderPrefix: 'ES',
+    maintenanceMode: false,
+    showSalePrices: true,
+    enableReviews: false,
+  });
+  const [loading, setLoading] = useState(true);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  // Load settings from Firestore on mount
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await getSettings();
+        if (data && Object.keys(data).length > 0) {
+          setSettings((prev) => ({ ...prev, ...data }));
+        }
+      } catch (err) {
+        console.error('Failed to load settings:', err);
+        setError('Failed to load settings from database.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
 
   const update = (key, val) => setSettings((prev) => ({ ...prev, [key]: val }));
 
@@ -98,11 +117,28 @@ export default function AdminSettingsPage() {
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setSaved(true);
-    setSaving(false);
-    setTimeout(() => setSaved(false), 3000);
+    setError('');
+    try {
+      await updateSettings(settings);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      setError('Failed to save settings. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', flexDirection: 'column', gap: '1rem' }}>
+        <Loader2 size={32} style={{ color: 'var(--color-lumen-gold)', animation: 'spin 1s linear infinite' }} />
+        <p style={{ color: 'var(--color-lumen-muted)', fontSize: '0.875rem' }}>Loading settings…</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSave}>
@@ -129,6 +165,13 @@ export default function AdminSettingsPage() {
           {saving ? 'Saving…' : saved ? 'Saved!' : 'Save Settings'}
         </button>
       </div>
+
+      {/* Error */}
+      {error && (
+        <div style={{ background: 'var(--color-lumen-error-light)', border: '1px solid rgba(204,0,0,0.25)', color: 'var(--color-lumen-error)', padding: '0.875rem 1rem', marginBottom: '1.5rem', fontSize: '0.875rem', borderRadius: '4px' }}>
+          {error}
+        </div>
+      )}
 
       {/* Store Info */}
       <Section title="Store Information">
@@ -194,6 +237,8 @@ export default function AdminSettingsPage() {
           </div>
         ))}
       </Section>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </form>
   );
 }

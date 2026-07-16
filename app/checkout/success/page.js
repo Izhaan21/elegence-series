@@ -1,15 +1,26 @@
+'use client';
+
+import { useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import Link from 'next/link';
 import { CheckCircle, Package, Mail } from 'lucide-react';
+import { useCart } from '@/context/CartContext';
 
-export const metadata = {
-  title: 'Order Confirmed',
-  description: 'Your order has been placed successfully.',
-};
+export default function OrderSuccessPage() {
+  const searchParams = useSearchParams();
+  const sessionId = searchParams?.get('session_id');
+  const { clearCart } = useCart();
+  const cleared = useRef(false);
 
-export default function OrderSuccessPage({ searchParams }) {
-  const sessionId = searchParams?.session_id;
+  // Clear the cart once when we land here with a valid session_id
+  useEffect(() => {
+    if (sessionId && !cleared.current) {
+      cleared.current = true;
+      clearCart();
+    }
+  }, [sessionId, clearCart]);
 
   return (
     <>
