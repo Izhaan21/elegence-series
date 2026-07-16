@@ -15,12 +15,14 @@ import {
   X,
   ChevronRight,
   ExternalLink,
+  Mail,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
+  { href: '/admin/messages', label: 'Messages', icon: Mail },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
